@@ -112,12 +112,28 @@ FRED_UNRATE_SERIES = {
 IRS_SOI_BASE_URL = "https://www.irs.gov/pub/irs-soi"
 LATEST_IRS_YEAR_PAIR = "2223"
 
-# BEA Regional Economic Accounts. Farm employment (CAEMP25N line 70) covers
-# the full agricultural workforce INCLUDING self-employed farmers and
-# ranchers — fills QCEW's UI-coverage gap. Annual, county-level.
+# USDA Census of Agriculture — 2022 headline farm counts (published Feb 2024).
+# Hardcoded as a stopgap until live NASS Quick Stats API integration. The
+# Census of Agriculture publishes county-level data every 5 years; refresh
+# this dict when the 2027 Census drops (expected early 2029).
+# "Producers" is the modern USDA term for what older terminology called
+# "farm operators" — anyone making management decisions on the farm.
+# Source: https://www.nass.usda.gov/Publications/AgCensus/2022/Online_Resources/County_Profiles/Texas/
+USDA_CENSUS_OF_AG_2022 = {
+    "Lubbock": {"farms": 1286, "producers": 2210, "land_acres": 465867},
+    "Taylor":  {"farms": 1222, "producers": 2167, "land_acres": 365679},
+    "Howard":  {"farms":  407, "producers":  717, "land_acres": 575487},
+}
+
+# BEA Regional Economic Accounts. Farm proprietors' income (CAINC5N line 71)
+# is net earnings of self-employed farmers and ranchers — the slice of the ag
+# economy that falls entirely outside QCEW's UI-payroll coverage. Annual,
+# county-level, reported in thousands of dollars. Can be negative in low-
+# commodity-price or drought years. Replaces the older CAEMP25N farm
+# employment count, which BEA retired from the API after a 2024 restructure.
 BEA_API_BASE = "https://apps.bea.gov/api/data"
-BEA_FARM_EMPLOYMENT_TABLE = "CAEMP25N"
-BEA_FARM_EMPLOYMENT_LINECODE = 70
+BEA_FARM_INCOME_TABLE = "CAINC5N"
+BEA_FARM_INCOME_LINECODE = 71
 AGGLVL_TOTAL = 70          # Single-area total covered, own_code=0
 AGGLVL_TOTAL_BY_OWN = 71   # Total by ownership
 AGGLVL_SUPERSECTOR = 72    # Supersector by ownership

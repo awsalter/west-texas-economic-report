@@ -15,9 +15,10 @@ import pandas as pd
 
 from data.clean import get_treemap_snapshots
 from data.constants import (
-    INDUSTRY_DOMAIN_COLORS, CHARCOAL, LIGHT_GRAY, OLIVE, SAND,
+    INDUSTRY_DOMAIN_COLORS, CHARCOAL, LIGHT_GRAY, OLIVE, SAND, COUNTY_COLORS,
+    USDA_CENSUS_OF_AG_2022,
 )
-from data.fetch_bea import latest_farm_employment
+from data.fetch_bea import latest_farm_income
 from utils.narratives import source_citation, format_industry_list
 
 
@@ -114,22 +115,96 @@ def build_figure(snapshots: list) -> go.Figure:
     return fig
 
 
-def _ag_annotation_markdown(latest_snapshot: pd.DataFrame, bea_latest: dict | None) -> str | None:
-    """Build the QCEW-vs-BEA agriculture comparison line under the treemap.
+def _format_dollars_millions(thousands: float) -> str:
+    """Format a thousands-of-dollars value as $X.XM (or −$X.XM if negative)."""
+    millions = thousands / 1000.0
+    sign = "−" if millions < 0 else ""
+    return f"{sign}${abs(millions):.1f}M"
 
-    Returns None if neither figure is available.
-    """
+
+def _ag_intro_markdown(
+    latest_snapshot: pd.DataFrame,
+    bea_latest: dict | None,
+    county_name: str,
+) -> str | None:
+    """Short intro paragraph above the farm income time-series chart."""
     if not bea_latest:
         return None
     ag_rows = latest_snapshot[latest_snapshot["industry_label"] == "Agriculture"]
-    qcew_str = f"{int(ag_rows.iloc[0]['employment']):,}" if not ag_rows.empty else "suppressed by BLS"
-    return (
-        f"**Total farm workforce (BEA, {bea_latest['year']}): "
-        f"{bea_latest['value']:,}** — includes self-employed farmers and ranchers. "
-        f"QCEW NAICS 11 reports only **{qcew_str}** private payroll jobs. "
-        f"The gap reflects BEA counting proprietors and small-employer farms that "
-        f"fall outside QCEW's UI-based coverage."
+    qcew_str = (
+        f"only **{int(ag_rows.iloc[0]['employment']):,}**" if not ag_rows.empty
+        else "**no disclosable** (BLS-suppressed)"
     )
+    dollars = _format_dollars_millions(bea_latest["value_thousands"])
+    usda = USDA_CENSUS_OF_AG_2022.get(county_name)
+    usda_clause = (
+        (
+            f" For headcount context, USDA's 2022 Census of Agriculture reports "
+            f"**{usda['producers']:,} producers** operating **{usda['farms']:,} "
+            f"farms** in this county across **{usda['land_acres']:,} acres**."
+        )
+        if usda else ""
+    )
+    return (
+        f"**Farm proprietors' income** — net annual earnings of self-employed "
+        f"farmers and ranchers, who fall entirely outside QCEW's UI-based "
+        f"coverage. QCEW NAICS 11 captured {qcew_str} wage-and-salary jobs in "
+        f"the latest quarter for this county.{usda_clause} The trend below "
+        f"shows the proprietor side of the ag economy in dollars (BEA REA, "
+        f"annual). Latest ({bea_latest['year']}): **{dollars}**."
+    )
+
+
+def build_farm_income_figure(bea_df: pd.DataFrame, county_name: str, county_color: str) -> go.Figure:
+    """Annual time series of BEA farm proprietors' income for one county, $M."""
+    sub = bea_df[bea_df["county_name"] == county_name].sort_values("year")
+    fig = go.Figure()
+    if sub.empty:
+        return fig
+
+    years = sub["year"].tolist()
+    values_m = [v / 1000.0 for v in sub["value_thousands"].tolist()]
+    hover_labels = [
+        f"−${abs(v):.1f}M" if v < 0 else f"${v:.1f}M" for v in values_m
+    ]
+
+    # Zero reference line — important when income dips negative (Taylor, drought years).
+    fig.add_hline(y=0, line=dict(color=LIGHT_GRAY, width=1, dash="dash"))
+
+    fig.add_trace(go.Scatter(
+        x=years,
+        y=values_m,
+        customdata=hover_labels,
+        mode="lines+markers",
+        line=dict(color=county_color, width=2.5),
+        marker=dict(size=5, color=county_color),
+        name="Farm proprietors' income",
+        hovertemplate="%{x}<br>%{customdata}<extra></extra>",
+    ))
+
+    fig.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        height=300,
+        margin=dict(t=20, b=60, l=80, r=20),
+        showlegend=False,
+        xaxis=dict(
+            title=dict(text="Year", standoff=10),
+            showgrid=False,
+            showline=True, linecolor="black", linewidth=2, mirror=False,
+            ticks="outside", tickcolor="black", ticklen=4,
+        ),
+        yaxis=dict(
+            title=dict(text="Farm proprietors' income ($M)", standoff=10),
+            tickprefix="$", ticksuffix="M",
+            tickformat=",.0f",
+            showgrid=False,
+            showline=True, linecolor="black", linewidth=2, mirror=False,
+            ticks="outside", tickcolor="black", ticklen=4,
+            zeroline=False,
+        ),
+    )
+    return fig
 
 
 def render(df: pd.DataFrame, bea_farm_df: pd.DataFrame | None = None):
@@ -159,18 +234,30 @@ def render(df: pd.DataFrame, bea_farm_df: pd.DataFrame | None = None):
     fig = build_figure(snapshots)
     st.plotly_chart(fig, use_container_width=True)
 
-    # Agriculture annotation — closes QCEW's farm-proprietor coverage gap.
+    # Farm proprietors' income — closes QCEW's coverage gap for self-employed
+    # farmers and ranchers. Annual time series (BEA REA CAINC5N line 71).
     if bea_farm_df is not None and not bea_farm_df.empty and not df.empty:
         county_name = str(df["county_name"].iloc[0])
-        ag_line = _ag_annotation_markdown(
-            latest, latest_farm_employment(bea_farm_df, county_name)
+        intro = _ag_intro_markdown(
+            latest, latest_farm_income(bea_farm_df, county_name), county_name,
         )
-        if ag_line:
-            st.markdown(ag_line)
+        if intro:
+            st.markdown(intro)
+            color = COUNTY_COLORS.get(county_name, CHARCOAL)
+            st.plotly_chart(
+                build_farm_income_figure(bea_farm_df, county_name, color),
+                use_container_width=True,
+            )
 
     st.caption(source_citation("BLS QCEW", "https://www.bls.gov/cew/", "Quarterly"))
     if bea_farm_df is not None and not bea_farm_df.empty:
         st.caption(source_citation(
-            "BEA REA CAEMP25N", "https://apps.bea.gov/regional/", "Annual",
+            "BEA REA CAINC5N (Farm proprietors' income)",
+            "https://apps.bea.gov/regional/", "Annual",
+        ))
+        st.caption(source_citation(
+            "USDA 2022 Census of Agriculture",
+            "https://www.nass.usda.gov/AgCensus/",
+            "Every 5 years",
         ))
     st.caption(f"_{METHODOLOGY_NOTE}_")

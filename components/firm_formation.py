@@ -2,7 +2,7 @@
 Firm Openings & Closings — quarterly establishment churn aggregated from
 industry-level QoQ deltas. Industries adding establishments stack above zero;
 industries losing establishments stack below; the sum equals the county's net
-QoQ change in establishment count. A dashed gold line overlays the U.S. national
+QoQ change in establishment count. A dashed tan line overlays the U.S. national
 rate rescaled to the county's establishment base for like-for-like comparison.
 """
 from __future__ import annotations
@@ -19,12 +19,12 @@ from utils.narratives import source_citation
 
 
 METHODOLOGY_NOTE = (
-    "Each blue bar sums the QoQ establishment growth across industries that "
+    "Each black bar sums the QoQ establishment growth across industries that "
     "gained firms; the red bar sums the loss across industries that shed firms. "
     "The dark line shows the county's BLS-published private establishment net "
     "change (own_code=5, agglvl=71) — it does not equal the sum of the bars "
     "because BLS suppresses small-cell industries from the per-sector view. The "
-    "dashed gold benchmark is U.S. private-sector QoQ growth rescaled to the "
+    "dashed tan benchmark is U.S. private-sector QoQ growth rescaled to the "
     "county's private establishment base — like-for-like with the bars. "
     "Trailing quarters with no benchmark mean the national figure hasn't been "
     "published yet. Q1 typically shows a large negative pattern across counties "

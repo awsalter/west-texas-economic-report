@@ -13,7 +13,7 @@ Data comes from:
 - **BLS Quarterly Census of Employment and Wages (QCEW)** — county-level employment, wages, establishments, and industry composition
 - **Federal Reserve Bank of St. Louis (FRED)** — county real GDP and unemployment rate
 - **IRS Statistics of Income (SOI)** — county-to-county migration
-- **BEA Regional Economic Accounts (CAEMP25N)** — farm employment including self-employed farmers and ranchers (closes QCEW's UI-payroll coverage gap)
+- **BEA Regional Economic Accounts (CAINC5N)** — farm proprietors' income (net earnings of self-employed farmers and ranchers; closes QCEW's UI-payroll coverage gap)
 
 ## Quick start (developers)
 
@@ -71,11 +71,11 @@ Every Monday at 1:00 AM Eastern, the GitHub Action regenerates all HTML files fr
 - **U.S. Bureau of Labor Statistics**, Quarterly Census of Employment and Wages (QCEW). https://www.bls.gov/cew/
 - **Federal Reserve Bank of St. Louis**, FRED economic data — county real GDP and unemployment rate series. https://fred.stlouisfed.org/
 - **Internal Revenue Service**, Statistics of Income (SOI) county-to-county migration data. https://www.irs.gov/statistics/soi-tax-stats-migration-data
-- **U.S. Bureau of Economic Analysis**, Regional Economic Accounts, table CAEMP25N (Total Employment by NAICS, Farm employment line). https://apps.bea.gov/regional/
+- **U.S. Bureau of Economic Analysis**, Regional Economic Accounts, table CAINC5N (Personal income by major component and earnings by NAICS industry, line 71 — Farm proprietors' income). https://apps.bea.gov/regional/
 
 ## Credits
 
-This dashboard is a derivative of the [South Florida Regional Economic Report](https://github.com/bryanpcutsinger/south-florida-economic-report) by Bryan Cutsinger (Florida Atlantic University). All chart components, data pipeline patterns, and the static-build approach were adapted from his MIT-licensed original. Significant modifications: replaced South Florida counties with West Texas counties, retuned color palette, and added BEA farm employment to address QCEW's underrepresentation of agricultural labor in this region.
+This dashboard is a derivative of the [South Florida Regional Economic Report](https://github.com/bryanpcutsinger/south-florida-economic-report) by Bryan Cutsinger (Florida Atlantic University). All chart components, data pipeline patterns, and the static-build approach were adapted from his MIT-licensed original. Significant modifications: replaced South Florida counties with West Texas counties, retuned color palette, and added BEA farm proprietors' income to address QCEW's underrepresentation of agricultural activity in this region.
 
 ## Author
 

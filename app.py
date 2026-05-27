@@ -12,13 +12,14 @@ import pandas as pd
 from data.fetch import fetch_all_data
 from data.fetch_fred import fetch_real_gdp, fetch_unemployment_rate
 from data.fetch_irs_migration import fetch_irs_migration
-from data.fetch_bea import fetch_farm_employment
+from data.fetch_bea import fetch_farm_income
 from data.clean import (
     clean, get_total_covered, get_latest_quarter,
     latest_gdp_with_growth, latest_unrate_with_yoy, latest_irs_net,
 )
 from data.constants import BLACK, SCARLET, CHARCOAL, LIGHT_GRAY, SLATE_BLUE, OFF_WHITE, COUNTY_COLORS
 from utils.formatting import fmt_number, fmt_currency
+from utils.methodology import methodology_html
 from utils.narratives import source_citation
 
 from components.employment_trends import render as render_trends
@@ -47,8 +48,9 @@ st.markdown(f"""
     /* Header styling */
     .main-title {{
         color: {BLACK};
-        font-size: 2.2rem;
+        font-size: 3rem !important;
         font-weight: 700;
+        line-height: 1.15;
         margin-bottom: 0;
         padding-bottom: 0;
     }}
@@ -159,6 +161,65 @@ st.markdown(f"""
     [data-testid="stMetricLabel"] {{
         color: {CHARCOAL};
     }}
+
+    /* Methodology tab */
+    .methodology-content {{
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+        margin-top: 0.5rem;
+    }}
+    .methodology-content .section-header h2 {{
+        color: {BLACK};
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin: 0 0 0.4rem 0;
+    }}
+    .methodology-content .section-desc {{
+        font-size: 0.95rem;
+        color: {CHARCOAL};
+        line-height: 1.65;
+        margin: 0 0 1.25rem 0;
+        max-width: 70ch;
+    }}
+    .methodology-section {{
+        background: #fff;
+        border: 1px solid {LIGHT_GRAY};
+        border-radius: 10px;
+        padding: 1.5rem 1.75rem;
+    }}
+    .methodology-section h3 {{
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: {BLACK};
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0 0 1rem 0;
+    }}
+    .methodology-item {{
+        margin-bottom: 1.4rem;
+    }}
+    .methodology-item:last-child {{
+        margin-bottom: 0;
+    }}
+    .methodology-item h4 {{
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: {BLACK};
+        margin: 0 0 0.4rem 0;
+    }}
+    .methodology-item p {{
+        font-size: 0.9rem;
+        color: {CHARCOAL};
+        line-height: 1.65;
+        margin: 0 0 0.5rem 0;
+    }}
+    .methodology-item p:last-child {{
+        margin-bottom: 0;
+    }}
+    .methodology-item strong {{
+        color: {BLACK};
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -180,7 +241,7 @@ df = clean(raw_df)
 _df_gdp_secondary = fetch_real_gdp()
 _df_unrate_secondary = fetch_unemployment_rate()
 _df_irs_secondary = fetch_irs_migration()
-_df_bea_farm = fetch_farm_employment()
+_df_bea_farm = fetch_farm_income()
 
 
 def _secondary_for(county_name: str) -> dict:
@@ -317,7 +378,7 @@ if not sample_latest.empty:
     sample_row = sample_latest.iloc[0]
     st.markdown(f'<div class="data-badge">Data as of {int(sample_row["year"])} Q{int(sample_row["qtr"])}</div>', unsafe_allow_html=True)
 
-st.markdown("### Regional Snapshot")
+st.header("Regional Snapshot")
 
 # 3 columns — one card per county
 county_order = ["Lubbock", "Taylor", "Howard"]
@@ -362,20 +423,24 @@ def _render_county_tab(county_df: pd.DataFrame, county_name: str):
 
 st.divider()
 
-tab_palm, tab_broward, tab_miami = st.tabs([
+tab_lubbock, tab_taylor, tab_howard, tab_methodology = st.tabs([
     "Lubbock County",
     "Taylor County",
     "Howard County",
+    "Methodology",
 ])
 
-with tab_palm:
+with tab_lubbock:
     _render_county_tab(df[df["county_name"] == "Lubbock"], "Lubbock")
 
-with tab_broward:
+with tab_taylor:
     _render_county_tab(df[df["county_name"] == "Taylor"], "Taylor")
 
-with tab_miami:
+with tab_howard:
     _render_county_tab(df[df["county_name"] == "Howard"], "Howard")
+
+with tab_methodology:
+    st.markdown(methodology_html(), unsafe_allow_html=True)
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.divider()

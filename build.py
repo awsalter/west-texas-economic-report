@@ -36,8 +36,9 @@ from data.constants import (
     BLACK, SCARLET, CHARCOAL, LIGHT_GRAY,
     SLATE_BLUE, OFF_WHITE, COUNTY_COLORS,
 )
-from data.fetch_bea import fetch_farm_employment, latest_farm_employment
+from data.fetch_bea import fetch_farm_income, latest_farm_income
 from utils.formatting import fmt_number, fmt_currency, fmt_pct
+from utils.methodology import methodology_html
 from utils.narratives import narrate_employment_trends, format_industry_list
 
 DOCS_DIR = Path(__file__).parent / "docs"
@@ -62,7 +63,7 @@ body {
 h1, h2, h3, h4 { color: """ + BLACK + """; }
 
 /* Header */
-.main-title { font-size: 2.2rem; font-weight: 700; margin-bottom: 0; }
+.main-title { font-size: 3rem; font-weight: 700; line-height: 1.15; margin-bottom: 0; }
 .main-subtitle { font-size: 1.0rem; margin-top: 0.25rem; color: """ + CHARCOAL + """; }
 
 .data-badge {
@@ -165,10 +166,47 @@ h1, h2, h3, h4 { color: """ + BLACK + """; }
 }
 .footer a { color: """ + SLATE_BLUE + """; }
 
+/* Methodology tab */
+.methodology-content { display: flex; flex-direction: column; gap: 1.75rem; margin-top: 0.5rem; }
+.methodology-content .section-header h2 {
+    color: """ + BLACK + """;
+    font-size: 1.6rem; font-weight: 700; margin: 0 0 0.4rem 0;
+}
+.methodology-content .section-desc {
+    font-size: 0.95rem; color: """ + CHARCOAL + """;
+    line-height: 1.65; margin: 0 0 1.25rem 0; max-width: 70ch;
+}
+.methodology-section {
+    background: #fff;
+    border: 1px solid """ + LIGHT_GRAY + """;
+    border-radius: 10px;
+    padding: 1.5rem 1.75rem;
+}
+.methodology-section h3 {
+    font-size: 0.92rem; font-weight: 600;
+    color: """ + BLACK + """;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin: 0 0 1rem 0;
+}
+.methodology-item { margin-bottom: 1.4rem; }
+.methodology-item:last-child { margin-bottom: 0; }
+.methodology-item h4 {
+    font-size: 0.95rem; font-weight: 600;
+    color: """ + BLACK + """;
+    margin: 0 0 0.4rem 0;
+}
+.methodology-item p {
+    font-size: 0.9rem; color: """ + CHARCOAL + """;
+    line-height: 1.65; margin: 0 0 0.5rem 0;
+}
+.methodology-item p:last-child { margin-bottom: 0; }
+.methodology-item strong { color: """ + BLACK + """; }
+
 @media (max-width: 768px) {
     .snapshot-row, .chart-row { flex-direction: column; }
     body { padding: 0.5rem 1rem; }
     .tab-btn { padding: 0.5rem 1rem; font-size: 0.9rem; }
+    .methodology-section { padding: 1.1rem 1.25rem; }
 }
 """
 
@@ -691,27 +729,53 @@ def build_employment_treemap(county_df, county_name, county_id):
     div_id = f"{county_id}-employment-treemap"
     figures = {div_id: _fig_json(fig)}
 
-    # BEA farm employment annotation — closes QCEW's proprietor-coverage gap.
-    bea_df = fetch_farm_employment()
-    bea_latest = latest_farm_employment(bea_df, county_name)
+    # BEA farm proprietors' income time series — closes QCEW's coverage gap.
+    from components.employment_treemap import build_farm_income_figure
+    from data.constants import COUNTY_COLORS, USDA_CENSUS_OF_AG_2022
+    bea_df = fetch_farm_income()
+    bea_latest = latest_farm_income(bea_df, county_name)
     ag_html = ""
     bea_source = ""
     if bea_latest:
         ag_rows = latest[latest["industry_label"] == "Agriculture"]
         qcew_str = (
-            f"{int(ag_rows.iloc[0]['employment']):,}" if not ag_rows.empty
-            else "suppressed by BLS"
+            f"only <strong>{int(ag_rows.iloc[0]['employment']):,}</strong>"
+            if not ag_rows.empty
+            else "<strong>no disclosable</strong> (BLS-suppressed)"
+        )
+        millions = bea_latest["value_thousands"] / 1000.0
+        sign = "&minus;" if millions < 0 else ""
+        dollars = f"{sign}${abs(millions):.1f}M"
+        farm_div_id = f"{county_id}-farm-income"
+        farm_color = COUNTY_COLORS.get(county_name, "#2D2D2D")
+        farm_fig = build_farm_income_figure(bea_df, county_name, farm_color)
+        figures[farm_div_id] = _fig_json(farm_fig)
+        usda = USDA_CENSUS_OF_AG_2022.get(county_name)
+        usda_clause = (
+            (
+                f" For headcount context, USDA's 2022 Census of Agriculture "
+                f"reports <strong>{usda['producers']:,} producers</strong> "
+                f"operating <strong>{usda['farms']:,} farms</strong> in this "
+                f"county across <strong>{usda['land_acres']:,} acres</strong>."
+            )
+            if usda else ""
         )
         ag_html = (
-            f'<p><strong>Total farm workforce (BEA, {bea_latest["year"]}): '
-            f'{bea_latest["value"]:,}</strong> — includes self-employed farmers '
-            f"and ranchers. QCEW NAICS 11 reports only <strong>{qcew_str}</strong> "
-            f"private payroll jobs. The gap reflects BEA counting proprietors and "
-            f"small-employer farms that fall outside QCEW's UI-based coverage.</p>"
+            f'<p><strong>Farm proprietors\' income</strong> &mdash; net annual '
+            f"earnings of self-employed farmers and ranchers, who fall entirely "
+            f"outside QCEW's UI-based coverage. QCEW NAICS 11 captured "
+            f"{qcew_str} wage-and-salary jobs in the latest quarter for this "
+            f"county.{usda_clause} The trend below shows the proprietor side "
+            f"of the ag economy in dollars (BEA REA, annual). Latest "
+            f"({bea_latest['year']}): <strong>{dollars}</strong>.</p>"
+            f'<div id="{farm_div_id}" class="plotly-chart"></div>'
         )
         bea_source = (
             '<p class="source">Source: '
-            '<a href="https://apps.bea.gov/regional/">BEA REA CAEMP25N</a> — Annual</p>'
+            '<a href="https://apps.bea.gov/regional/">BEA REA CAINC5N '
+            "(Farm proprietors' income)</a> &mdash; Annual<br>"
+            'Headcount: <a href="https://www.nass.usda.gov/AgCensus/">'
+            "USDA 2022 Census of Agriculture</a> &mdash; Every 5 years</p>"
         )
 
     html = (
@@ -796,6 +860,17 @@ def build_html(df):
         tab_content += "\n".join(sections)
         tab_content += "\n</div>\n"
 
+    # Methodology tab — global, not per-county.
+    tab_buttons += (
+        '<button class="tab-btn" data-tab="methodology" '
+        "onclick=\"showTab('methodology')\">Methodology</button>\n"
+    )
+    tab_content += (
+        '<div id="methodology" class="tab-content">\n'
+        + methodology_html()
+        + "\n</div>\n"
+    )
+
     figures_json = json.dumps(figures)
     built = datetime.now(timezone.utc).strftime("%B %d, %Y")
 
@@ -819,7 +894,7 @@ def build_html(df):
         f'Lubbock, Taylor &amp; Howard Counties</p>',
         f'<div class="data-badge">{badge}</div>',
         "</header>",
-        f'<h3 style="color: {BLACK};">Regional Snapshot</h3>',
+        f'<h2 style="color: {BLACK};">Regional Snapshot</h2>',
         f'<div class="snapshot-row">{kpi_cards}</div>',
         KPI_CAPTION_HTML,
         '<div class="divider"></div>',
@@ -891,7 +966,7 @@ def write_embeds(df):
 
     # Combined 3-county snapshot (canonical embed — must keep URL stable).
     kpi_body = (
-        f'<h3 style="color: {BLACK}; margin-bottom: 0.5rem;">Regional Snapshot</h3>'
+        f'<h2 style="color: {BLACK}; margin-bottom: 0.5rem;">Regional Snapshot</h2>'
         f'<div class="snapshot-row">{"".join(county_cards.values())}</div>'
         f'{KPI_CAPTION_HTML}'
     )
@@ -904,8 +979,8 @@ def write_embeds(df):
     for county_name, card_html in county_cards.items():
         slug = county_name.lower().replace(" ", "-")
         body = (
-            f'<h3 style="color: {BLACK}; margin-bottom: 0.5rem;">'
-            f'{county_name} County Snapshot</h3>'
+            f'<h2 style="color: {BLACK}; margin-bottom: 0.5rem;">'
+            f'{county_name} County Snapshot</h2>'
             f'<div class="snapshot-row single-county">{card_html}</div>'
             f'{KPI_CAPTION_HTML}'
         )
