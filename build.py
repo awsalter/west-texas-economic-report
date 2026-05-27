@@ -157,14 +157,19 @@ h1, h2, h3, h4 { color: """ + BLACK + """; }
 .source a:hover { text-decoration: underline; }
 
 .footer {
-    font-size: 0.8rem;
-    color: #888;
+    font-size: 0.85rem;
+    color: """ + CHARCOAL + """;
     text-align: center;
     margin-top: 2rem;
-    padding: 1rem 0;
+    padding: 1.25rem 0;
     border-top: 1px solid #EEE;
 }
-.footer a { color: """ + SLATE_BLUE + """; }
+.footer-content { max-width: 820px; margin: 0 auto; }
+.footer-content p { margin: 0 0 0.5rem 0; line-height: 1.55; }
+.footer-content p:last-child { margin-bottom: 0; }
+.footer-disclaimer { font-size: 0.78rem; color: #888; }
+.footer a { color: """ + SLATE_BLUE + """; text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
 
 /* Methodology tab */
 .methodology-content { display: flex; flex-direction: column; gap: 1.75rem; margin-top: 0.5rem; }
@@ -901,8 +906,20 @@ def build_html(df):
         f'<div class="tab-bar">{tab_buttons}</div>',
         tab_content,
         '<footer class="footer">',
-        f'Source: <a href="https://www.bls.gov/cew/">BLS QCEW</a> &mdash; Quarterly '
-        f'| Last updated: {built}',
+        '<div class="footer-content">',
+        '<p>'
+        '<a href="https://www.awsalter.com" target="_blank">Alexander William Salter</a>. '
+        '&ldquo;West Texas Regional Economic Report.&rdquo; '
+        'Rawls College of Business, Area of Energy Commerce and Business Economics. '
+        f'Last updated: {built}. '
+        '<a href="https://awsalter.github.io/west-texas-economic-report/" target="_blank">'
+        'https://awsalter.github.io/west-texas-economic-report/</a>'
+        '</p>',
+        '<p class="footer-disclaimer">'
+        'This dashboard is for informational purposes only. All data is sourced '
+        'from public government databases and updated automatically each week.'
+        '</p>',
+        "</div>",
         "</footer>",
         "<script>",
         f"var figureData = {figures_json};",
