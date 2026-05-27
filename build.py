@@ -11,6 +11,9 @@ Usage:
 """
 from __future__ import annotations
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import json
 import sys
 from datetime import datetime, timezone
@@ -30,15 +33,16 @@ from components.growth_quadrant import (
 )
 GROWTH_QUADRANT_NOTE = f'<p class="source"><em>{_GROWTH_QUADRANT_TEXT}</em></p>'
 from data.constants import (
-    FAU_BLUE, FAU_RED, FAU_DARK_GRAY, FAU_GRAY,
-    FAU_ELECTRIC_BLUE, FAU_SKY_BLUE, COUNTY_COLORS,
+    BLACK, SCARLET, CHARCOAL, LIGHT_GRAY,
+    SLATE_BLUE, OFF_WHITE, COUNTY_COLORS,
 )
+from data.fetch_bea import fetch_farm_employment, latest_farm_employment
 from utils.formatting import fmt_number, fmt_currency, fmt_pct
 from utils.narratives import narrate_employment_trends, format_industry_list
 
 DOCS_DIR = Path(__file__).parent / "docs"
 MIN_EMPLOYMENT = 100
-COUNTY_ORDER = ["Palm Beach", "Broward", "Miami-Dade"]
+COUNTY_ORDER = ["Lubbock", "Taylor", "Howard"]
 
 # ── CSS ──────────────────────────────────────────────────────────────────────
 
@@ -48,23 +52,23 @@ CSS = """
 body {
     font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background-color: #FFFFFF;
-    color: """ + FAU_DARK_GRAY + """;
+    color: """ + CHARCOAL + """;
     line-height: 1.6;
     max-width: 1200px;
     margin: 0 auto;
     padding: 1rem 2rem;
 }
 
-h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
+h1, h2, h3, h4 { color: """ + BLACK + """; }
 
 /* Header */
 .main-title { font-size: 2.2rem; font-weight: 700; margin-bottom: 0; }
-.main-subtitle { font-size: 1.0rem; margin-top: 0.25rem; color: """ + FAU_DARK_GRAY + """; }
+.main-subtitle { font-size: 1.0rem; margin-top: 0.25rem; color: """ + CHARCOAL + """; }
 
 .data-badge {
     display: inline-block;
-    background-color: """ + FAU_SKY_BLUE + """;
-    color: """ + FAU_BLUE + """;
+    background-color: """ + OFF_WHITE + """;
+    color: """ + BLACK + """;
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.85rem;
@@ -90,20 +94,20 @@ h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.2rem;
-    color: """ + FAU_DARK_GRAY + """;
+    color: """ + CHARCOAL + """;
     min-height: 1.8rem;
     line-height: 0.9rem;
 }
-.kpi-value { font-size: 1.4rem; font-weight: 700; color: """ + FAU_BLUE + """; }
+.kpi-value { font-size: 1.4rem; font-weight: 700; color: """ + BLACK + """; }
 .kpi-delta { font-size: 0.8rem; margin-top: 0.1rem; }
 .kpi-delta.positive { color: #2E7D32; }
-.kpi-delta.negative { color: """ + FAU_RED + """; }
+.kpi-delta.negative { color: """ + SCARLET + """; }
 /* Secondary KPI row — typography matches the primary row; only the
    separator (border-top) distinguishes them. */
 .kpi-row.secondary {
     margin-top: 0.9rem;
     padding-top: 0.7rem;
-    border-top: 1px solid """ + FAU_GRAY + """;
+    border-top: 1px solid """ + LIGHT_GRAY + """;
 }
 .kpi-period { font-size: 0.7rem; color: #888; margin-top: 0.15rem; }
 .kpi-caption {
@@ -114,11 +118,11 @@ h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
 }
 
 /* Tabs */
-.tab-bar { display: flex; border-bottom: 2px solid """ + FAU_GRAY + """; margin: 1.5rem 0 0 0; }
+.tab-bar { display: flex; border-bottom: 2px solid """ + LIGHT_GRAY + """; margin: 1.5rem 0 0 0; }
 .tab-btn {
     padding: 0.75rem 1.5rem;
     font-weight: 500;
-    color: """ + FAU_DARK_GRAY + """;
+    color: """ + CHARCOAL + """;
     background: none;
     border: none;
     cursor: pointer;
@@ -127,8 +131,8 @@ h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
     margin-bottom: -2px;
     font-family: inherit;
 }
-.tab-btn:hover { color: """ + FAU_BLUE + """; }
-.tab-btn.active { border-bottom-color: """ + FAU_BLUE + """; color: """ + FAU_BLUE + """; }
+.tab-btn:hover { color: """ + BLACK + """; }
+.tab-btn.active { border-bottom-color: """ + BLACK + """; color: """ + BLACK + """; }
 
 .tab-content { display: none; padding-top: 1rem; }
 .tab-content.active { display: block; }
@@ -148,7 +152,7 @@ h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
     color: #888;
     margin-top: 0.25rem;
 }
-.source a { color: """ + FAU_ELECTRIC_BLUE + """; text-decoration: none; }
+.source a { color: """ + SLATE_BLUE + """; text-decoration: none; }
 .source a:hover { text-decoration: underline; }
 
 .footer {
@@ -159,7 +163,7 @@ h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
     padding: 1rem 0;
     border-top: 1px solid #EEE;
 }
-.footer a { color: """ + FAU_ELECTRIC_BLUE + """; }
+.footer a { color: """ + SLATE_BLUE + """; }
 
 @media (max-width: 768px) {
     .snapshot-row, .chart-row { flex-direction: column; }
@@ -201,12 +205,12 @@ EMBED_CSS = """
 body {
     font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background-color: #FFFFFF;
-    color: """ + FAU_DARK_GRAY + """;
+    color: """ + CHARCOAL + """;
     line-height: 1.6;
     padding: 0.5rem;
 }
 
-h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
+h1, h2, h3, h4 { color: """ + BLACK + """; }
 
 /* KPI cards */
 .snapshot-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
@@ -227,18 +231,18 @@ h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.2rem;
-    color: """ + FAU_DARK_GRAY + """;
+    color: """ + CHARCOAL + """;
     min-height: 1.8rem;
     line-height: 0.9rem;
 }
-.kpi-value { font-size: 1.4rem; font-weight: 700; color: """ + FAU_BLUE + """; }
+.kpi-value { font-size: 1.4rem; font-weight: 700; color: """ + BLACK + """; }
 .kpi-delta { font-size: 0.8rem; margin-top: 0.1rem; }
 .kpi-delta.positive { color: #2E7D32; }
-.kpi-delta.negative { color: """ + FAU_RED + """; }
+.kpi-delta.negative { color: """ + SCARLET + """; }
 .kpi-row.secondary {
     margin-top: 0.9rem;
     padding-top: 0.7rem;
-    border-top: 1px solid """ + FAU_GRAY + """;
+    border-top: 1px solid """ + LIGHT_GRAY + """;
 }
 .kpi-period { font-size: 0.7rem; color: #888; margin-top: 0.15rem; }
 .kpi-caption {
@@ -261,7 +265,7 @@ h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
     color: #888;
     margin-top: 0.25rem;
 }
-.source a { color: """ + FAU_ELECTRIC_BLUE + """; text-decoration: none; }
+.source a { color: """ + SLATE_BLUE + """; text-decoration: none; }
 .source a:hover { text-decoration: underline; }
 
 @media (max-width: 768px) {
@@ -270,7 +274,7 @@ h1, h2, h3, h4 { color: """ + FAU_BLUE + """; }
 }
 """
 
-# Each embed posts its rendered height to the parent FAU page via postMessage.
+# Each embed posts its rendered height to the parent embedding page via postMessage.
 # Debounce (100 ms) + last-height dedupe kill the feedback loop where Plotly's
 # responsive: true would re-fire layout when the parent resizes the iframe.
 EMBED_JS = """
@@ -497,7 +501,7 @@ def _trends_chart(totals, y_col, title, color, tickformat, hover_prefix, log_tra
         ))
         fig.add_vrect(
             x0=last_trend_x, x1=projection.index[-1],
-            fillcolor=FAU_SKY_BLUE, opacity=0.5,
+            fillcolor=OFF_WHITE, opacity=0.5,
             layer="below", line_width=0,
             annotation_text="PROJECTED", annotation_position="top right",
             annotation_font=dict(size=9, color=color),
@@ -538,7 +542,7 @@ def build_trends(county_df, county_name, county_id):
 
     totals = totals.sort_values("date")
     earliest, latest = totals.iloc[0], totals.iloc[-1]
-    color = COUNTY_COLORS.get(county_name, FAU_BLUE)
+    color = COUNTY_COLORS.get(county_name, BLACK)
 
     narrative = narrate_employment_trends(
         county_name=county_name,
@@ -687,10 +691,35 @@ def build_employment_treemap(county_df, county_name, county_id):
     div_id = f"{county_id}-employment-treemap"
     figures = {div_id: _fig_json(fig)}
 
+    # BEA farm employment annotation — closes QCEW's proprietor-coverage gap.
+    bea_df = fetch_farm_employment()
+    bea_latest = latest_farm_employment(bea_df, county_name)
+    ag_html = ""
+    bea_source = ""
+    if bea_latest:
+        ag_rows = latest[latest["industry_label"] == "Agriculture"]
+        qcew_str = (
+            f"{int(ag_rows.iloc[0]['employment']):,}" if not ag_rows.empty
+            else "suppressed by BLS"
+        )
+        ag_html = (
+            f'<p><strong>Total farm workforce (BEA, {bea_latest["year"]}): '
+            f'{bea_latest["value"]:,}</strong> — includes self-employed farmers '
+            f"and ranchers. QCEW NAICS 11 reports only <strong>{qcew_str}</strong> "
+            f"private payroll jobs. The gap reflects BEA counting proprietors and "
+            f"small-employer farms that fall outside QCEW's UI-based coverage.</p>"
+        )
+        bea_source = (
+            '<p class="source">Source: '
+            '<a href="https://apps.bea.gov/regional/">BEA REA CAEMP25N</a> — Annual</p>'
+        )
+
     html = (
         f'<div class="section"><h2>Workforce Composition</h2>'
         f'<p>{narrative}</p>'
-        f'<div id="{div_id}" class="plotly-chart"></div>{SOURCE}{EMPLOYMENT_TREEMAP_NOTE}</div>'
+        f'<div id="{div_id}" class="plotly-chart"></div>'
+        f'{ag_html}'
+        f'{SOURCE}{bea_source}{EMPLOYMENT_TREEMAP_NOTE}</div>'
     )
     return html, figures
 
@@ -734,7 +763,7 @@ def build_html(df):
     kpi_cards = ""
     for county_name in COUNTY_ORDER:
         county_df = df[df["county_name"] == county_name]
-        color = COUNTY_COLORS.get(county_name, FAU_BLUE)
+        color = COUNTY_COLORS.get(county_name, BLACK)
         secondary = {
             "gdp": latest_gdp_with_growth(df_gdp_secondary, county_name),
             "unrate": latest_unrate_with_yoy(df_unrate_secondary, county_name),
@@ -777,7 +806,7 @@ def build_html(df):
         "<head>",
         '<meta charset="UTF-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-        "<title>South Florida Regional Economic Report</title>",
+        "<title>West Texas Regional Economic Report</title>",
         '<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>',
         "<style>",
         CSS,
@@ -785,12 +814,12 @@ def build_html(df):
         "</head>",
         "<body>",
         "<header>",
-        f'<h1 class="main-title">South Florida Regional Economic Report</h1>',
+        f'<h1 class="main-title">West Texas Regional Economic Report</h1>',
         f'<p class="main-subtitle">Quarterly Census of Employment and Wages (QCEW) &mdash; '
-        f'Palm Beach, Broward &amp; Miami-Dade Counties</p>',
+        f'Lubbock, Taylor &amp; Howard Counties</p>',
         f'<div class="data-badge">{badge}</div>',
         "</header>",
-        f'<h3 style="color: {FAU_BLUE};">Regional Snapshot</h3>',
+        f'<h3 style="color: {BLACK};">Regional Snapshot</h3>',
         f'<div class="snapshot-row">{kpi_cards}</div>',
         KPI_CAPTION_HTML,
         '<div class="divider"></div>',
@@ -852,7 +881,7 @@ def write_embeds(df):
     county_cards: dict[str, str] = {}
     for county_name in COUNTY_ORDER:
         county_df = df[df["county_name"] == county_name]
-        color = COUNTY_COLORS.get(county_name, FAU_BLUE)
+        color = COUNTY_COLORS.get(county_name, BLACK)
         secondary = {
             "gdp": latest_gdp_with_growth(df_gdp, county_name),
             "unrate": latest_unrate_with_yoy(df_unrate, county_name),
@@ -860,14 +889,14 @@ def write_embeds(df):
         }
         county_cards[county_name] = build_kpi_card(county_df, county_name, color, secondary)
 
-    # Combined 3-county snapshot (existing FAU embed — must keep URL stable).
+    # Combined 3-county snapshot (canonical embed — must keep URL stable).
     kpi_body = (
-        f'<h3 style="color: {FAU_BLUE}; margin-bottom: 0.5rem;">Regional Snapshot</h3>'
+        f'<h3 style="color: {BLACK}; margin-bottom: 0.5rem;">Regional Snapshot</h3>'
         f'<div class="snapshot-row">{"".join(county_cards.values())}</div>'
         f'{KPI_CAPTION_HTML}'
     )
     (embeds_dir / "kpi-cards.html").write_text(
-        wrap_as_embed(kpi_body, {}, "South Florida Regional Snapshot"),
+        wrap_as_embed(kpi_body, {}, "West Texas Regional Snapshot"),
         encoding="utf-8",
     )
 
@@ -875,7 +904,7 @@ def write_embeds(df):
     for county_name, card_html in county_cards.items():
         slug = county_name.lower().replace(" ", "-")
         body = (
-            f'<h3 style="color: {FAU_BLUE}; margin-bottom: 0.5rem;">'
+            f'<h3 style="color: {BLACK}; margin-bottom: 0.5rem;">'
             f'{county_name} County Snapshot</h3>'
             f'<div class="snapshot-row single-county">{card_html}</div>'
             f'{KPI_CAPTION_HTML}'

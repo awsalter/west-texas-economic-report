@@ -24,7 +24,6 @@ from data.constants import IRS_SOI_BASE_URL, LATEST_IRS_YEAR_PAIR, COUNTIES
 CACHE_DIR = Path(__file__).parent / "cache"
 IRS_CACHE = CACHE_DIR / "qcew_irs_migration.parquet"
 
-FLORIDA_STATE_FIPS = 12
 TOTAL_MIGRATION_STATE_FIPS = 96  # IRS sentinel: aggregate across US + Foreign origins
 TOTAL_MIGRATION_COUNTY_FIPS = 0
 
@@ -45,17 +44,18 @@ def _county_fips_from_name(name: str) -> int:
 
 
 def _net_for_county(
-    inflow: pd.DataFrame, outflow: pd.DataFrame, county_fips: int
+    inflow: pd.DataFrame, outflow: pd.DataFrame,
+    state_fips: int, county_fips: int,
 ) -> dict:
     """Look up the published Total Migration-US and Foreign summary row for one county."""
     in_row = inflow[
-        (inflow["y2_statefips"] == FLORIDA_STATE_FIPS)
+        (inflow["y2_statefips"] == state_fips)
         & (inflow["y2_countyfips"] == county_fips)
         & (inflow["y1_statefips"] == TOTAL_MIGRATION_STATE_FIPS)
         & (inflow["y1_countyfips"] == TOTAL_MIGRATION_COUNTY_FIPS)
     ]
     out_row = outflow[
-        (outflow["y1_statefips"] == FLORIDA_STATE_FIPS)
+        (outflow["y1_statefips"] == state_fips)
         & (outflow["y1_countyfips"] == county_fips)
         & (outflow["y2_statefips"] == TOTAL_MIGRATION_STATE_FIPS)
         & (outflow["y2_countyfips"] == TOTAL_MIGRATION_COUNTY_FIPS)
@@ -88,8 +88,9 @@ def _fetch_from_irs() -> pd.DataFrame:
 
     rows = []
     for full_fips, county_name in COUNTIES.items():
+        state_fips = int(full_fips[:2])
         county_fips = int(full_fips[2:])
-        rec = _net_for_county(inflow, outflow, county_fips)
+        rec = _net_for_county(inflow, outflow, state_fips, county_fips)
         if not rec:
             continue
         rec["county_name"] = county_name

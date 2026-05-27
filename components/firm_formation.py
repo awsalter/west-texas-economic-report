@@ -12,7 +12,7 @@ import pandas as pd
 
 from data.clean import get_firm_formation_data, get_national_qoq_pct
 from data.constants import (
-    FAU_BLUE, FAU_RED, FAU_DARK_GRAY, FAU_SAND, AGGLVL_TOTAL_BY_OWN,
+    BLACK, SCARLET, CHARCOAL, SAND, AGGLVL_TOTAL_BY_OWN,
 )
 from data.fetch import fetch_national_data
 from utils.narratives import source_citation
@@ -45,21 +45,21 @@ def build_figure(
     fig.add_trace(go.Bar(
         x=x, y=plot_data["additions"],
         name="Industries adding establishments",
-        marker_color=FAU_BLUE,
+        marker_color=BLACK,
         hovertemplate="%{x}<br>Adding: +%{y:,.0f} establishments<extra></extra>",
     ))
     fig.add_trace(go.Bar(
         x=x, y=plot_data["subtractions"],
         name="Industries losing establishments",
-        marker_color=FAU_RED,
+        marker_color=SCARLET,
         hovertemplate="%{x}<br>Losing: %{y:,.0f} establishments<extra></extra>",
     ))
     fig.add_trace(go.Scatter(
         x=x, y=plot_data["net"],
         mode="lines+markers",
         name="County net (BLS-published, private)",
-        line=dict(color=FAU_DARK_GRAY, width=2),
-        marker=dict(size=5, color=FAU_DARK_GRAY,
+        line=dict(color=CHARCOAL, width=2),
+        marker=dict(size=5, color=CHARCOAL,
                     line=dict(width=1, color="white")),
         hovertemplate="%{x}<br>County net: %{y:+,.0f} establishments<extra></extra>",
     ))
@@ -74,8 +74,8 @@ def build_figure(
                 x=x, y=benchmark,
                 mode="lines+markers",
                 name="U.S. avg rate (rescaled)",
-                line=dict(color=FAU_SAND, dash="dash", width=2),
-                marker=dict(size=5, color=FAU_SAND),
+                line=dict(color=SAND, dash="dash", width=2),
+                marker=dict(size=5, color=SAND),
                 customdata=nat_pct_aligned.values,
                 hovertemplate=(
                     "%{x}<br>U.S. avg rate: %{customdata:+.2%}"

@@ -1,7 +1,7 @@
 """
 Industry Landscape — YoY employment growth × YoY wage growth.
-Bubbles colored by industry domain (FAU palette); each of the four quadrants
-carries a faint FAU-palette tint, à la Amber's Industry Landscape mockup.
+Bubbles colored by industry domain; each of the four quadrants carries a
+faint palette tint.
 Identification is hover-only; no on-bubble labels.
 """
 from __future__ import annotations
@@ -12,7 +12,7 @@ import pandas as pd
 
 from data.clean import get_growth_quadrant_data
 from data.constants import (
-    INDUSTRY_DOMAIN_COLORS, FAU_DARK_GRAY, FAU_GRAY, FAU_STONE, FAU_SKY_BLUE,
+    INDUSTRY_DOMAIN_COLORS, CHARCOAL, LIGHT_GRAY, OLIVE, OFF_WHITE,
 )
 from utils.narratives import source_citation, format_industry_list
 
@@ -42,19 +42,19 @@ def build_figure(plot_data: pd.DataFrame) -> go.Figure:
 
     sizes = np.sqrt(plot_data["employment"])
     bubble_colors = (
-        plot_data["industry_label"].map(INDUSTRY_DOMAIN_COLORS).fillna(FAU_STONE)
+        plot_data["industry_label"].map(INDUSTRY_DOMAIN_COLORS).fillna(OLIVE)
     )
 
     fig = go.Figure()
 
-    # Quadrant background tints (FAU palette, all four quadrants) — drawn first
+    # Quadrant background tints (all four quadrants) — drawn first
     # so bubbles render on top.
     quadrant_tints = [
         # x0, x1, y0, y1, fillcolor
-        (0, x_range[1], 0, y_range[1], FAU_SKY_BLUE),                       # NE
-        (x_range[0], 0, 0, y_range[1], "rgba(212, 185, 139, 0.15)"),        # NW: FAU_SAND
-        (x_range[0], 0, y_range[0], 0, "rgba(204, 0, 0, 0.08)"),            # SW: FAU_RED
-        (0, x_range[1], y_range[0], 0, "rgba(122, 151, 171, 0.12)"),        # SE: FAU_STONE
+        (0, x_range[1], 0, y_range[1], OFF_WHITE),                       # NE
+        (x_range[0], 0, 0, y_range[1], "rgba(201, 168, 122, 0.15)"),        # NW: SAND
+        (x_range[0], 0, y_range[0], 0, "rgba(204, 0, 0, 0.08)"),            # SW: SCARLET
+        (0, x_range[1], y_range[0], 0, "rgba(122, 139, 92, 0.12)"),        # SE: OLIVE
     ]
     for x0, x1, y0, y1, fc in quadrant_tints:
         fig.add_shape(
@@ -87,8 +87,8 @@ def build_figure(plot_data: pd.DataFrame) -> go.Figure:
     ))
 
     # Dashed zero divider lines.
-    fig.add_vline(x=0, line_dash="dash", line_color=FAU_GRAY, line_width=1)
-    fig.add_hline(y=0, line_dash="dash", line_color=FAU_GRAY, line_width=1)
+    fig.add_vline(x=0, line_dash="dash", line_color=LIGHT_GRAY, line_width=1)
+    fig.add_hline(y=0, line_dash="dash", line_color=LIGHT_GRAY, line_width=1)
 
     # CAPS quadrant labels in paper-coordinate corners — always shown.
     corner_labels = [
@@ -102,7 +102,7 @@ def build_figure(plot_data: pd.DataFrame) -> go.Figure:
             x=x_p, y=y_p, xref="paper", yref="paper",
             text=txt, showarrow=False,
             xanchor=xa, yanchor=ya,
-            font=dict(size=9, color=FAU_DARK_GRAY,
+            font=dict(size=9, color=CHARCOAL,
                       family="Source Sans Pro, sans-serif"),
         )
 

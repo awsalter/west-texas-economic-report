@@ -1,20 +1,32 @@
 cff-version: 1.2.0
-title: "South Florida Regional Economic Report"
+title: "West Texas Regional Economic Report"
 message: "If you reference this dashboard, please cite it as below."
 type: software
 authors:
-  - family-names: Cutsinger
-    given-names: Bryan
-    email: bcutsinger@fau.edu
-    affiliation: "Florida Atlantic University"
-    # orcid: "https://orcid.org/0000-0000-0000-0000"
-url: "https://github.com/bryanpcutsinger/south-florida-economic-report"
-repository-code: "https://github.com/bryanpcutsinger/south-florida-economic-report"
+  - family-names: Salter
+    given-names: Alexander W.
+    affiliation: "Texas Tech University"
+url: "https://github.com/awsalter/west-texas-economic-report"
+repository-code: "https://github.com/awsalter/west-texas-economic-report"
 keywords:
   - economic indicators
   - QCEW
-  - South Florida
+  - West Texas
+  - TX-19
+  - Lubbock
+  - Abilene
+  - Big Spring
   - dashboard
 license: MIT
-version: "1.0.0"
-date-released: "2026-05-15"
+version: "0.1.0"
+date-released: "2026-05-27"
+references:
+  - type: software
+    title: "South Florida Regional Economic Report"
+    authors:
+      - family-names: Cutsinger
+        given-names: Bryan
+        affiliation: "Florida Atlantic University"
+    url: "https://github.com/bryanpcutsinger/south-florida-economic-report"
+    license: MIT
+    notes: "Original work this dashboard was adapted from."

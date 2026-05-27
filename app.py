@@ -1,19 +1,23 @@
 """
-South Florida Regional Economic Report
+West Texas Regional Economic Report
 Built with Streamlit + Plotly using BLS QCEW data.
-Covers Palm Beach, Broward, and Miami-Dade counties.
+Covers Lubbock, Taylor, and Howard counties.
 """
+from dotenv import load_dotenv
+load_dotenv()
+
 import streamlit as st
 import pandas as pd
 
 from data.fetch import fetch_all_data
 from data.fetch_fred import fetch_real_gdp, fetch_unemployment_rate
 from data.fetch_irs_migration import fetch_irs_migration
+from data.fetch_bea import fetch_farm_employment
 from data.clean import (
     clean, get_total_covered, get_latest_quarter,
     latest_gdp_with_growth, latest_unrate_with_yoy, latest_irs_net,
 )
-from data.constants import FAU_BLUE, FAU_RED, FAU_DARK_GRAY, FAU_GRAY, FAU_ELECTRIC_BLUE, FAU_SKY_BLUE, COUNTY_COLORS
+from data.constants import BLACK, SCARLET, CHARCOAL, LIGHT_GRAY, SLATE_BLUE, OFF_WHITE, COUNTY_COLORS
 from utils.formatting import fmt_number, fmt_currency
 from utils.narratives import source_citation
 
@@ -24,12 +28,12 @@ from components.employment_treemap import render as render_employment_treemap
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="South Florida Regional Economic Report",
+    page_title="West Texas Regional Economic Report",
     page_icon=":chart_with_upwards_trend:",
     layout="wide",
 )
 
-# ── FAU Theme CSS ─────────────────────────────────────────────────────────────
+# ── Theme CSS ─────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <style>
     /* White background throughout */
@@ -42,14 +46,14 @@ st.markdown(f"""
 
     /* Header styling */
     .main-title {{
-        color: {FAU_BLUE};
+        color: {BLACK};
         font-size: 2.2rem;
         font-weight: 700;
         margin-bottom: 0;
         padding-bottom: 0;
     }}
     .main-subtitle {{
-        color: {FAU_DARK_GRAY};
+        color: {CHARCOAL};
         font-size: 1.0rem;
         margin-top: 0;
     }}
@@ -78,7 +82,7 @@ st.markdown(f"""
     }}
     .kpi-label {{
         font-size: 0.75rem;
-        color: {FAU_DARK_GRAY};
+        color: {CHARCOAL};
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 0.2rem;
@@ -88,7 +92,7 @@ st.markdown(f"""
     .kpi-value {{
         font-size: 1.4rem;
         font-weight: 700;
-        color: {FAU_BLUE};
+        color: {BLACK};
     }}
     .kpi-delta {{
         font-size: 0.8rem;
@@ -98,14 +102,14 @@ st.markdown(f"""
         color: #2E7D32;
     }}
     .kpi-delta.negative {{
-        color: {FAU_RED};
+        color: {SCARLET};
     }}
     /* Secondary KPI row (real GDP, unemployment, net migration) — typography
        matches the primary row; only the separator distinguishes them. */
     .kpi-row.secondary {{
         margin-top: 0.9rem;
         padding-top: 0.7rem;
-        border-top: 1px solid {FAU_GRAY};
+        border-top: 1px solid {LIGHT_GRAY};
     }}
     .kpi-period {{
         font-size: 0.7rem;
@@ -116,8 +120,8 @@ st.markdown(f"""
     /* Data quarter badge */
     .data-badge {{
         display: inline-block;
-        background-color: {FAU_SKY_BLUE};
-        color: {FAU_BLUE};
+        background-color: {OFF_WHITE};
+        color: {BLACK};
         padding: 0.25rem 0.75rem;
         border-radius: 20px;
         font-size: 0.85rem;
@@ -128,39 +132,39 @@ st.markdown(f"""
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 0;
-        border-bottom: 2px solid {FAU_GRAY};
+        border-bottom: 2px solid {LIGHT_GRAY};
     }}
     .stTabs [data-baseweb="tab"] {{
         padding: 0.75rem 1.5rem;
         font-weight: 500;
-        color: {FAU_DARK_GRAY};
+        color: {CHARCOAL};
     }}
     .stTabs [aria-selected="true"] {{
-        border-bottom: 3px solid {FAU_BLUE};
-        color: {FAU_BLUE};
+        border-bottom: 3px solid {BLACK};
+        color: {BLACK};
     }}
 
     /* Make all Streamlit text dark on white */
     .stMarkdown, .stMetric, .stCaption, p, span, label {{
-        color: {FAU_DARK_GRAY};
+        color: {CHARCOAL};
     }}
     h1, h2, h3, h4, h5, h6 {{
-        color: {FAU_BLUE} !important;
+        color: {BLACK} !important;
     }}
 
     /* Override Streamlit metric styling */
     [data-testid="stMetricValue"] {{
-        color: {FAU_BLUE};
+        color: {BLACK};
     }}
     [data-testid="stMetricLabel"] {{
-        color: {FAU_DARK_GRAY};
+        color: {CHARCOAL};
     }}
 </style>
 """, unsafe_allow_html=True)
 
 # ── Title ─────────────────────────────────────────────────────────────────────
-st.markdown('<p class="main-title">South Florida Regional Economic Report</p>', unsafe_allow_html=True)
-st.markdown('<p class="main-subtitle">Quarterly Census of Employment and Wages (QCEW) &mdash; Palm Beach, Broward &amp; Miami-Dade Counties</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-title">West Texas Regional Economic Report</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-subtitle">Quarterly Census of Employment and Wages (QCEW) &mdash; Lubbock, Taylor &amp; Howard Counties</p>', unsafe_allow_html=True)
 
 # ── Load and clean data ──────────────────────────────────────────────────────
 raw_df = fetch_all_data()
@@ -176,6 +180,7 @@ df = clean(raw_df)
 _df_gdp_secondary = fetch_real_gdp()
 _df_unrate_secondary = fetch_unemployment_rate()
 _df_irs_secondary = fetch_irs_migration()
+_df_bea_farm = fetch_farm_employment()
 
 
 def _secondary_for(county_name: str) -> dict:
@@ -315,12 +320,12 @@ if not sample_latest.empty:
 st.markdown("### Regional Snapshot")
 
 # 3 columns — one card per county
-county_order = ["Palm Beach", "Broward", "Miami-Dade"]
+county_order = ["Lubbock", "Taylor", "Howard"]
 cols = st.columns(3)
 for col, county_name in zip(cols, county_order):
     with col:
         county_df = df[df["county_name"] == county_name]
-        color = COUNTY_COLORS.get(county_name, FAU_BLUE)
+        color = COUNTY_COLORS.get(county_name, BLACK)
         _county_snapshot_card(county_df, county_name, color, _secondary_for(county_name))
 
 st.caption(
@@ -344,7 +349,7 @@ def _render_county_tab(county_df: pd.DataFrame, county_name: str):
 
     # Workforce Composition
     st.divider()
-    render_employment_treemap(county_df)
+    render_employment_treemap(county_df, _df_bea_farm)
 
     # Industry Landscape
     st.divider()
@@ -358,19 +363,19 @@ def _render_county_tab(county_df: pd.DataFrame, county_name: str):
 st.divider()
 
 tab_palm, tab_broward, tab_miami = st.tabs([
-    "Palm Beach County",
-    "Broward County",
-    "Miami-Dade County",
+    "Lubbock County",
+    "Taylor County",
+    "Howard County",
 ])
 
 with tab_palm:
-    _render_county_tab(df[df["county_name"] == "Palm Beach"], "Palm Beach")
+    _render_county_tab(df[df["county_name"] == "Lubbock"], "Lubbock")
 
 with tab_broward:
-    _render_county_tab(df[df["county_name"] == "Broward"], "Broward")
+    _render_county_tab(df[df["county_name"] == "Taylor"], "Taylor")
 
 with tab_miami:
-    _render_county_tab(df[df["county_name"] == "Miami-Dade"], "Miami-Dade")
+    _render_county_tab(df[df["county_name"] == "Howard"], "Howard")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.divider()

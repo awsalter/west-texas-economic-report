@@ -8,7 +8,7 @@ import pandas as pd
 
 from data.analysis import deseasonalize_trend, project_trend, periods_to_current_quarter
 from data.clean import get_total_covered
-from data.constants import COUNTY_COLORS, FAU_BLUE, FAU_SKY_BLUE
+from data.constants import COUNTY_COLORS, BLACK, OFF_WHITE
 from utils.formatting import fmt_currency
 from utils.narratives import narrate_employment_trends, source_citation
 
@@ -90,7 +90,7 @@ def _build_chart(
         # Faint projection-zone band.
         fig.add_vrect(
             x0=last_trend_x, x1=projection.index[-1],
-            fillcolor=FAU_SKY_BLUE, opacity=0.5,
+            fillcolor=OFF_WHITE, opacity=0.5,
             layer="below", line_width=0,
             annotation_text="PROJECTED", annotation_position="top right",
             annotation_font=dict(size=9, color=color),
@@ -159,7 +159,7 @@ def render(df: pd.DataFrame):
     # as a LaTeX math span.
     st.markdown((empl_text + wage_text).replace("$", "\\$"))
 
-    color = COUNTY_COLORS.get(county_name, FAU_BLUE)
+    color = COUNTY_COLORS.get(county_name, BLACK)
 
     col1, col2 = st.columns(2)
     with col1:

@@ -1,6 +1,9 @@
 """
-Constants for the South Florida Regional Economic Dashboard.
-FIPS codes, NAICS labels, ownership codes, color palettes, and API config.
+Constants for the West Texas Regional Economic Dashboard.
+FIPS codes, NAICS labels, ownership codes, color palette, and API config.
+
+Covers the top 3 counties by population of Texas's 19th congressional district:
+Lubbock, Taylor (Abilene), and Howard (Big Spring).
 """
 from datetime import date
 
@@ -13,58 +16,60 @@ END_YEAR = date.today().year
 YEARS = list(range(START_YEAR, END_YEAR + 1))
 QUARTERS = [1, 2, 3, 4]
 
-# ── Counties ──────────────────────────────────────────────────────────────────
+# ── Counties (top 3 of TX-19 by population) ──────────────────────────────────
 COUNTIES = {
-    "12099": "Palm Beach",
-    "12011": "Broward",
-    "12086": "Miami-Dade",
+    "48303": "Lubbock",  # Lubbock metro
+    "48441": "Taylor",   # Abilene metro
+    "48227": "Howard",   # Big Spring
 }
 
-# ── FAU Color Palette ────────────────────────────────────────────────────────
-FAU_BLUE = "#003366"
-FAU_RED = "#CC0000"
-FAU_DARK_GRAY = "#4D4C55"
-FAU_GRAY = "#CCCCCC"
-FAU_ELECTRIC_BLUE = "#126BD9"
-FAU_STONE = "#7A97AB"
-FAU_SKY_BLUE = "#D9ECFF"
-FAU_SAND = "#D4B98B"
+# ── Color Palette ────────────────────────────────────────────────────────────
+# TTU-inspired scarlet & black anchor; no institutional affiliation claimed.
+BLACK       = "#000000"   # primary; headers, titles, KPI values, Lubbock county
+SCARLET     = "#CC0000"   # accent; negative deltas, Taylor county, goods-producing
+CHARCOAL    = "#2D2D2D"   # body text, labels
+LIGHT_GRAY  = "#CCCCCC"   # borders, tab underlines
+SLATE_BLUE  = "#5B7C8C"   # links, Howard county, professional & business industry
+OLIVE       = "#7A8B5C"   # education & health industry
+OFF_WHITE   = "#F5F5F5"   # badge background
+SAND        = "#C9A87A"   # trade & logistics industry
+NAVY        = "#1F3A5C"   # information & finance industry
 
 COUNTY_COLORS = {
-    "Palm Beach": FAU_BLUE,
-    "Broward": FAU_RED,
-    "Miami-Dade": FAU_ELECTRIC_BLUE,
+    "Lubbock": BLACK,
+    "Taylor":  SCARLET,
+    "Howard":  SLATE_BLUE,
 }
 
-# Industry → FAU palette color, grouped by broad domain. Used by the Growth
+# Industry → palette color, grouped by broad domain. Used by the Growth
 # Quadrant chart, which colors bubbles by domain rather than by county.
 INDUSTRY_DOMAIN_COLORS = {
     # Goods-producing
-    "Agriculture":                       FAU_RED,
-    "Mining":                            FAU_RED,
-    "Utilities":                         FAU_RED,
-    "Construction":                      FAU_RED,
-    "Manufacturing":                     FAU_RED,
+    "Agriculture":                       SCARLET,
+    "Mining":                            SCARLET,
+    "Utilities":                         SCARLET,
+    "Construction":                      SCARLET,
+    "Manufacturing":                     SCARLET,
     # Trade & Logistics
-    "Wholesale Trade":                   FAU_SAND,
-    "Retail Trade":                      FAU_SAND,
-    "Transportation & Warehousing":      FAU_SAND,
+    "Wholesale Trade":                   SAND,
+    "Retail Trade":                      SAND,
+    "Transportation & Warehousing":      SAND,
     # Information & Finance
-    "Information":                       FAU_BLUE,
-    "Finance & Insurance":               FAU_BLUE,
-    "Real Estate":                       FAU_BLUE,
+    "Information":                       NAVY,
+    "Finance & Insurance":               NAVY,
+    "Real Estate":                       NAVY,
     # Professional & Business
-    "Professional & Technical Services": FAU_ELECTRIC_BLUE,
-    "Management of Companies":           FAU_ELECTRIC_BLUE,
-    "Admin & Waste Services":            FAU_ELECTRIC_BLUE,
+    "Professional & Technical Services": SLATE_BLUE,
+    "Management of Companies":           SLATE_BLUE,
+    "Admin & Waste Services":            SLATE_BLUE,
     # Education & Health
-    "Educational Services":              FAU_STONE,
-    "Health Care & Social Assistance":   FAU_STONE,
+    "Educational Services":              OLIVE,
+    "Health Care & Social Assistance":   OLIVE,
     # Leisure & Other
-    "Arts & Entertainment":              FAU_DARK_GRAY,
-    "Accommodation & Food Services":     FAU_DARK_GRAY,
-    "Other Services":                    FAU_DARK_GRAY,
-    "Public Administration":             FAU_DARK_GRAY,
+    "Arts & Entertainment":              CHARCOAL,
+    "Accommodation & Food Services":     CHARCOAL,
+    "Other Services":                    CHARCOAL,
+    "Public Administration":             CHARCOAL,
 }
 
 # ── Aggregation levels ────────────────────────────────────────────────────────
@@ -88,17 +93,17 @@ FRED_API_BASE = "https://api.stlouisfed.org/fred"
 
 # Real GDP series (annual, thousands of chained 2017 dollars). FIPS-derivable.
 FRED_GDP_SERIES = {
-    "Palm Beach": "REALGDPALL12099",
-    "Broward":    "REALGDPALL12011",
-    "Miami-Dade": "REALGDPALL12086",
+    "Lubbock": "REALGDPALL48303",
+    "Taylor":  "REALGDPALL48441",
+    "Howard":  "REALGDPALL48227",
 }
 
 # Unemployment rate series (monthly %, NSA). IDs are NOT derivable from FIPS —
 # verified manually via FRED search. Bump if any series ID is renamed.
 FRED_UNRATE_SERIES = {
-    "Palm Beach": "FLPALM2URN",
-    "Broward":    "FLBROW5URN",
-    "Miami-Dade": "FLMIAM6URN",
+    "Lubbock": "TXLUBB3URN",
+    "Taylor":  "TXTAYL1URN",
+    "Howard":  "TXHOWA7URN",
 }
 
 # IRS Statistics of Income county-to-county migration data. Year pair is the
@@ -106,6 +111,13 @@ FRED_UNRATE_SERIES = {
 # IRS publishes a newer year so the version change is visible in git.
 IRS_SOI_BASE_URL = "https://www.irs.gov/pub/irs-soi"
 LATEST_IRS_YEAR_PAIR = "2223"
+
+# BEA Regional Economic Accounts. Farm employment (CAEMP25N line 70) covers
+# the full agricultural workforce INCLUDING self-employed farmers and
+# ranchers — fills QCEW's UI-coverage gap. Annual, county-level.
+BEA_API_BASE = "https://apps.bea.gov/api/data"
+BEA_FARM_EMPLOYMENT_TABLE = "CAEMP25N"
+BEA_FARM_EMPLOYMENT_LINECODE = 70
 AGGLVL_TOTAL = 70          # Single-area total covered, own_code=0
 AGGLVL_TOTAL_BY_OWN = 71   # Total by ownership
 AGGLVL_SUPERSECTOR = 72    # Supersector by ownership
@@ -176,4 +188,3 @@ NUMERIC_COLS = [
     "oty_qtrly_contributions_chg", "oty_qtrly_contributions_pct_chg",
     "oty_avg_wkly_wage_chg", "oty_avg_wkly_wage_pct_chg",
 ]
-

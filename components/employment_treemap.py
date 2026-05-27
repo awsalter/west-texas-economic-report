@@ -15,8 +15,9 @@ import pandas as pd
 
 from data.clean import get_treemap_snapshots
 from data.constants import (
-    INDUSTRY_DOMAIN_COLORS, FAU_DARK_GRAY, FAU_GRAY, FAU_STONE, FAU_SAND,
+    INDUSTRY_DOMAIN_COLORS, CHARCOAL, LIGHT_GRAY, OLIVE, SAND,
 )
+from data.fetch_bea import latest_farm_employment
 from utils.narratives import source_citation, format_industry_list
 
 
@@ -30,8 +31,8 @@ METHODOLOGY_NOTE = (
 
 
 def _text_color_for(domain_color: str) -> str:
-    """Pick contrast text color: dark gray on FAU_SAND (light), white otherwise."""
-    return FAU_DARK_GRAY if domain_color == FAU_SAND else "white"
+    """Pick contrast text color: dark gray on SAND (light), white otherwise."""
+    return CHARCOAL if domain_color == SAND else "white"
 
 
 def build_figure(snapshots: list) -> go.Figure:
@@ -49,7 +50,7 @@ def build_figure(snapshots: list) -> go.Figure:
 
     for idx, (year, qtr, plot_data) in enumerate(snapshots):
         domain_colors = [
-            INDUSTRY_DOMAIN_COLORS.get(label, FAU_STONE)
+            INDUSTRY_DOMAIN_COLORS.get(label, OLIVE)
             for label in plot_data["industry_label"]
         ]
         text_colors = [_text_color_for(c) for c in domain_colors]
@@ -103,9 +104,9 @@ def build_figure(snapshots: list) -> go.Figure:
             y=-0.05, yanchor="top",
             pad=dict(t=8, b=4),
             bgcolor="white",
-            bordercolor=FAU_GRAY,
+            bordercolor=LIGHT_GRAY,
             borderwidth=1,
-            font=dict(color=FAU_DARK_GRAY, size=11),
+            font=dict(color=CHARCOAL, size=11),
             active=default_idx,
             buttons=buttons,
         )],
@@ -113,7 +114,25 @@ def build_figure(snapshots: list) -> go.Figure:
     return fig
 
 
-def render(df: pd.DataFrame):
+def _ag_annotation_markdown(latest_snapshot: pd.DataFrame, bea_latest: dict | None) -> str | None:
+    """Build the QCEW-vs-BEA agriculture comparison line under the treemap.
+
+    Returns None if neither figure is available.
+    """
+    if not bea_latest:
+        return None
+    ag_rows = latest_snapshot[latest_snapshot["industry_label"] == "Agriculture"]
+    qcew_str = f"{int(ag_rows.iloc[0]['employment']):,}" if not ag_rows.empty else "suppressed by BLS"
+    return (
+        f"**Total farm workforce (BEA, {bea_latest['year']}): "
+        f"{bea_latest['value']:,}** — includes self-employed farmers and ranchers. "
+        f"QCEW NAICS 11 reports only **{qcew_str}** private payroll jobs. "
+        f"The gap reflects BEA counting proprietors and small-employer farms that "
+        f"fall outside QCEW's UI-based coverage."
+    )
+
+
+def render(df: pd.DataFrame, bea_farm_df: pd.DataFrame | None = None):
     """Workforce Composition treemap with year-selector buttons."""
     import streamlit as st
 
@@ -139,5 +158,19 @@ def render(df: pd.DataFrame):
     st.markdown(narrative)
     fig = build_figure(snapshots)
     st.plotly_chart(fig, use_container_width=True)
+
+    # Agriculture annotation — closes QCEW's farm-proprietor coverage gap.
+    if bea_farm_df is not None and not bea_farm_df.empty and not df.empty:
+        county_name = str(df["county_name"].iloc[0])
+        ag_line = _ag_annotation_markdown(
+            latest, latest_farm_employment(bea_farm_df, county_name)
+        )
+        if ag_line:
+            st.markdown(ag_line)
+
     st.caption(source_citation("BLS QCEW", "https://www.bls.gov/cew/", "Quarterly"))
+    if bea_farm_df is not None and not bea_farm_df.empty:
+        st.caption(source_citation(
+            "BEA REA CAEMP25N", "https://apps.bea.gov/regional/", "Annual",
+        ))
     st.caption(f"_{METHODOLOGY_NOTE}_")
