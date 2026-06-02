@@ -27,6 +27,7 @@ jobs:
       - name: Build static dashboard
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          BEA_API_KEY: ${{ secrets.BEA_API_KEY }}
         run: python build.py
 
       - name: Commit and push if changed
