@@ -11,3 +11,6 @@ build/
 .DS_Store
 data/cache/
 scratch/
+
+# local weekly auto-update task log
+auto_update.log
