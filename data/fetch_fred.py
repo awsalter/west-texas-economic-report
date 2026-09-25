@@ -15,6 +15,7 @@ import pandas as pd
 import requests
 
 from data.constants import FRED_API_BASE, FRED_GDP_SERIES, FRED_UNRATE_SERIES
+from data.cache_util import ANNUAL_MAX_AGE_DAYS, cache_is_fresh
 
 CACHE_DIR = Path(__file__).parent / "cache"
 GDP_CACHE = CACHE_DIR / "qcew_fred_gdp.parquet"
@@ -73,16 +74,19 @@ def fetch_real_gdp() -> pd.DataFrame:
 
     Returns an empty DataFrame if no cache and no API key is set.
     """
-    if GDP_CACHE.exists():
+    if cache_is_fresh(GDP_CACHE, ANNUAL_MAX_AGE_DAYS):
         return pd.read_parquet(GDP_CACHE)
     api_key = _fred_api_key()
-    if not api_key:
-        return pd.DataFrame()
-    df = _fetch_series_set(FRED_GDP_SERIES, api_key)
-    if not df.empty:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(GDP_CACHE, index=False)
-    return df
+    if api_key:
+        df = _fetch_series_set(FRED_GDP_SERIES, api_key)
+        if not df.empty:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            df.to_parquet(GDP_CACHE, index=False)
+            return df
+    # No key or the fetch failed — keep showing the last good data if we have it.
+    if GDP_CACHE.exists():
+        return pd.read_parquet(GDP_CACHE)
+    return pd.DataFrame()
 
 
 def fetch_unemployment_rate() -> pd.DataFrame:
@@ -90,13 +94,16 @@ def fetch_unemployment_rate() -> pd.DataFrame:
 
     Returns an empty DataFrame if no cache and no API key is set.
     """
-    if UNRATE_CACHE.exists():
+    if cache_is_fresh(UNRATE_CACHE):
         return pd.read_parquet(UNRATE_CACHE)
     api_key = _fred_api_key()
-    if not api_key:
-        return pd.DataFrame()
-    df = _fetch_series_set(FRED_UNRATE_SERIES, api_key)
-    if not df.empty:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(UNRATE_CACHE, index=False)
-    return df
+    if api_key:
+        df = _fetch_series_set(FRED_UNRATE_SERIES, api_key)
+        if not df.empty:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            df.to_parquet(UNRATE_CACHE, index=False)
+            return df
+    # No key or the fetch failed — keep showing the last good data if we have it.
+    if UNRATE_CACHE.exists():
+        return pd.read_parquet(UNRATE_CACHE)
+    return pd.DataFrame()

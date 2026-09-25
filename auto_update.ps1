@@ -19,10 +19,19 @@ try {
     Set-Location $repo
     Log '--- run start ---'
 
+    # Never let git block on an interactive credential prompt. Under a scheduled
+    # task nobody can answer one, so the run would hang until the task's 1-hour
+    # limit killed it (this is what happened on 2026-08-17). Fail fast instead.
+    $env:GIT_TERMINAL_PROMPT = '0'
+
     # 1. Rebuild the static dashboard (build.py loads .env for FRED/BEA keys).
+    #    WTER_REFRESH=1 forces the parquet caches under data/cache/ to re-fetch.
+    #    Without it a build can serve months-old data under a fresh "Last
+    #    updated" stamp — refreshing is the entire point of this weekly job.
     $py = Join-Path $repo '.venv\Scripts\python.exe'
     if (-not (Test-Path $py)) { throw "venv python not found at $py" }
 
+    $env:WTER_REFRESH = '1'
     $out = & $py build.py 2>&1
     if ($LASTEXITCODE -ne 0) {
         Log "BUILD FAILED (exit $LASTEXITCODE):"
@@ -46,7 +55,11 @@ try {
 
     # 3. Rebase onto any commits the GitHub Action pushed, so this task and the
     #    Action can coexist safely if the fork's cron starts firing again.
-    & git pull --rebase 2>&1 | ForEach-Object { Log "    $_" }
+    #    --autostash is required: a plain rebase aborts with "cannot pull with
+    #    rebase: You have unstaged changes" if ANY tracked file is dirty (an
+    #    edited CLAUDE.md blocked the 2026-09-25 run), which silently stranded
+    #    the built commit locally and left the live site stale.
+    & git pull --rebase --autostash 2>&1 | ForEach-Object { Log "    $_" }
     if ($LASTEXITCODE -ne 0) { throw "git pull --rebase failed (exit $LASTEXITCODE)" }
 
     # 4. Push to GitHub Pages.

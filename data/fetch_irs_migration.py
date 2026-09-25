@@ -20,6 +20,7 @@ import pandas as pd
 import requests
 
 from data.constants import IRS_SOI_BASE_URL, LATEST_IRS_YEAR_PAIR, COUNTIES
+from data.cache_util import ANNUAL_MAX_AGE_DAYS, cache_is_fresh
 
 CACHE_DIR = Path(__file__).parent / "cache"
 IRS_CACHE = CACHE_DIR / "qcew_irs_migration.parquet"
@@ -102,10 +103,15 @@ def _fetch_from_irs() -> pd.DataFrame:
 
 def fetch_irs_migration() -> pd.DataFrame:
     """Cached fetch of net domestic migration per county, latest year-pair."""
-    if IRS_CACHE.exists():
+    if cache_is_fresh(IRS_CACHE, ANNUAL_MAX_AGE_DAYS):
         return pd.read_parquet(IRS_CACHE)
     df = _fetch_from_irs()
     if not df.empty:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         df.to_parquet(IRS_CACHE, index=False)
+        return df
+    # Fetch failed — keep showing the last good data if we have it.
+    if IRS_CACHE.exists():
+        print("WARNING: IRS migration fetch failed; serving the existing (stale) cache.")
+        return pd.read_parquet(IRS_CACHE)
     return df

@@ -20,6 +20,7 @@ from data.constants import (
     BLS_BASE_URL, COUNTIES, YEARS, QUARTERS,
     AGGLVL_US_TOTAL, AGGLVL_US_BY_OWN,
 )
+from data.cache_util import cache_is_fresh
 
 CACHE_DIR = Path(__file__).parent / "cache"
 CACHE_FILE = CACHE_DIR / "qcew_data.parquet"
@@ -92,15 +93,25 @@ def _load_cache() -> pd.DataFrame | None:
 
 
 def fetch_all_data() -> pd.DataFrame:
-    """Load QCEW data from local cache, or fetch from BLS if no cache exists."""
-    cached = _load_cache()
-    if cached is not None:
-        return cached
+    """Load QCEW data from local cache, re-fetching once the cache goes stale.
 
-    # No cache — fetch fresh from BLS
+    The cache has an age limit (see data.cache_util); without one the first
+    successful fetch would be served forever and new quarters would never
+    appear. If the re-fetch fails we fall back to the existing cache rather
+    than blanking the dashboard.
+    """
+    if cache_is_fresh(CACHE_FILE):
+        return pd.read_parquet(CACHE_FILE)
+
     df = _fetch_from_bls()
     if not df.empty:
         _save_cache(df)
+        return df
+
+    cached = _load_cache()
+    if cached is not None:
+        print("WARNING: BLS fetch failed; serving the existing (stale) cache.")
+        return cached
     return df
 
 
@@ -189,7 +200,7 @@ def fetch_national_data() -> pd.DataFrame:
     filter (only own_code=0 present), the cache is re-fetched in place
     so consumers downstream don't silently degrade on a stale schema.
     """
-    if NATIONAL_CACHE_FILE.exists():
+    if cache_is_fresh(NATIONAL_CACHE_FILE):
         df = pd.read_parquet(NATIONAL_CACHE_FILE)
         if "own_code" in df.columns and 5 not in df["own_code"].values:
             fresh = _fetch_national_from_bls()
@@ -198,8 +209,14 @@ def fetch_national_data() -> pd.DataFrame:
                 fresh.to_parquet(NATIONAL_CACHE_FILE, index=False)
                 df = fresh
         return df
+
     df = _fetch_national_from_bls()
     if not df.empty:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         df.to_parquet(NATIONAL_CACHE_FILE, index=False)
+        return df
+
+    if NATIONAL_CACHE_FILE.exists():
+        print("WARNING: national BLS fetch failed; serving the existing (stale) cache.")
+        return pd.read_parquet(NATIONAL_CACHE_FILE)
     return df

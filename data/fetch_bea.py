@@ -26,6 +26,7 @@ from data.constants import (
     BEA_API_BASE, BEA_FARM_INCOME_TABLE, BEA_FARM_INCOME_LINECODE,
     COUNTIES,
 )
+from data.cache_util import ANNUAL_MAX_AGE_DAYS, cache_is_fresh
 
 CACHE_DIR = Path(__file__).parent / "cache"
 BEA_CACHE = CACHE_DIR / "bea_farm_income.parquet"
@@ -89,16 +90,19 @@ def fetch_farm_income() -> pd.DataFrame:
     thousands of dollars and can be negative. Returns an empty DataFrame if
     no cache and no API key is set.
     """
-    if BEA_CACHE.exists():
+    if cache_is_fresh(BEA_CACHE, ANNUAL_MAX_AGE_DAYS):
         return pd.read_parquet(BEA_CACHE)
     api_key = _bea_api_key()
-    if not api_key:
-        return pd.DataFrame()
-    df = _fetch_from_bea(api_key)
-    if not df.empty:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(BEA_CACHE, index=False)
-    return df
+    if api_key:
+        df = _fetch_from_bea(api_key)
+        if not df.empty:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            df.to_parquet(BEA_CACHE, index=False)
+            return df
+    # No key or the fetch failed — keep showing the last good data if we have it.
+    if BEA_CACHE.exists():
+        return pd.read_parquet(BEA_CACHE)
+    return pd.DataFrame()
 
 
 def latest_farm_income(df: pd.DataFrame, county_name: str) -> dict | None:
